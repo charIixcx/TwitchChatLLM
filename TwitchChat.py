@@ -1,6 +1,7 @@
 import base64
 import io
 import json
+import os
 import queue
 import random
 import threading
@@ -17,12 +18,13 @@ from tkinter import ttk
 # ===========================
 # Config (tweak as you like)
 # ===========================
-API_URL = "http://127.0.0.1:1234/v1/chat/completions"
-MODEL = "gemma-3-12B-it-QAT-Q4_0.gguf"          # matches your curl example
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")  # Set this as environment variable
+API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent"
+MODEL = "gemini-2.0-flash-exp"          # Gemini vision model
 INTERVAL_SEC = 3.0                     # how often to generate a new line
 HISTORY_LEN = 20                       # number of previous chat lines to include as context
 TEMPERATURE = 0.7
-MAX_TOKENS = -1                        # -1 for "unlimited" in LM Studio
+MAX_TOKENS = 256                       # Max tokens for response
 STREAM = False
 WINDOW_WIDTH = 420
 WINDOW_HEIGHT = 700
@@ -103,9 +105,12 @@ def get_screen_data_url(max_w=2048, max_h=2048):
         return f"data:image/png;base64,{b64}", img_copy
 
 # ===========================
-# LLM call
+# LLM call (Gemini API)
 # ===========================
 def llm_generate_line(screen_data_url, recent_chat, personality=None):
+    if not GEMINI_API_KEY:
+        return "(ERROR: GEMINI_API_KEY not set)"
+    
     # Randomly select a personality if none provided
     if personality is None:
         personality = random.choice(list(CHAT_PERSONALITIES.keys()))
@@ -121,34 +126,46 @@ def llm_generate_line(screen_data_url, recent_chat, personality=None):
         recent = "(none yet)"
 
     user_text = (
+        f"{system_instructions}\n\n"
         "SCREENSHOT: (see image)\n"
         f"RECENT_CHAT:\n{recent}\n\n"
         "Now produce exactly ONE new Twitch-style chat line reacting to the screenshot."
     )
 
+    # Extract base64 data from data URL (remove the "data:image/png;base64," prefix)
+    image_data = screen_data_url.split(",")[1]
+
+    # Gemini API payload format
     payload = {
-        "model": MODEL,
-        "messages": [
-            {"role": "system", "content": [{"type": "text", "text": system_instructions}]},
+        "contents": [
             {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": user_text},
-                    {"type": "image_url", "image_url": {"url": screen_data_url}}
+                "parts": [
+                    {"text": user_text},
+                    {
+                        "inline_data": {
+                            "mime_type": "image/png",
+                            "data": image_data
+                        }
+                    }
                 ]
             }
         ],
-        "temperature": TEMPERATURE,
-        "max_tokens": MAX_TOKENS,
-        "stream": STREAM
+        "generationConfig": {
+            "temperature": TEMPERATURE,
+            "maxOutputTokens": MAX_TOKENS,
+        }
     }
 
-    resp = requests.post(API_URL, json=payload, timeout=60)
+    # Add API key as query parameter
+    url_with_key = f"{API_URL}?key={GEMINI_API_KEY}"
+    
+    resp = requests.post(url_with_key, json=payload, timeout=60)
     resp.raise_for_status()
     data = resp.json()
-    # LM Studio OpenAI-compatible output
+    
+    # Gemini API response format
     try:
-        content = data["choices"][0]["message"]["content"].strip()
+        content = data["candidates"][0]["content"]["parts"][0]["text"].strip()
     except Exception as e:
         content = f"(error parsing response: {e})"
     return content

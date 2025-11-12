@@ -8,26 +8,40 @@ Make sure Python is installed on your operating system, then install the require
 pip install --upgrade pillow mss requests
 ```
 
-### 2. Install LM Studio
-- [Download and install LM Studio](https://lmstudio.ai/) for your operating system
-- LM Studio will be used to fetch models and run a local API server
+### 2. Get a Gemini API Key
+1. Go to [Google AI Studio](https://aistudio.google.com/app/apikey)
+2. Sign in with your Google account
+3. Click **"Get API key"** or **"Create API key"**
+4. Copy your API key
 
-### 3. Choose and Download a VLM Model
-Pick a Vision-Language Model (VLM) from LM Studio's catalog:
-- **Recommended**: Gemma 3 12b QAT (requires 7GB of VRAM)
-- **Lower VRAM alternatives**: Qwen3 VL 4B or 8B
+### 3. Set Up Your API Key
 
-### 4. Configure the Script
-Edit the `MODEL` parameter at the top of the script to match the exact name of the model you chose.
+**On Linux/Mac:**
+```bash
+export GEMINI_API_KEY="your-api-key-here"
+```
+
+**On Windows (Command Prompt):**
+```cmd
+set GEMINI_API_KEY=your-api-key-here
+```
+
+**On Windows (PowerShell):**
+```powershell
+$env:GEMINI_API_KEY="your-api-key-here"
+```
+
+**For Codespaces:**
+Add `GEMINI_API_KEY` as a Codespace secret:
+1. Go to your GitHub repository settings
+2. Navigate to **Secrets and variables** → **Codespaces**
+3. Click **New repository secret**
+4. Name: `GEMINI_API_KEY`
+5. Value: your API key
 
 ## Running the Application
 
-### 1. Start the LM Studio Server
-1. Open LM Studio
-2. Navigate to the **Developer** tab
-3. Toggle **Start server** (located at the top left of the screen)
-
-### 2. Launch the Script
+### Launch the Script
 Open your terminal, navigate to the directory containing the script, and run:
 ```bash
 python TwitchChat.py
@@ -35,4 +49,4 @@ python TwitchChat.py
 
 ---
 
-You're all set! The program should now be running.
+You're all set! The program should now be running using Google's Gemini API (no local model required).
